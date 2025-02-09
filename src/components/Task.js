@@ -9,8 +9,11 @@ import {
   Typography,
 } from "@mui/material";
 import Box from "@mui/material/Box";
+import { DateTime } from "luxon";
 import { useState } from "react";
-import { saveTask } from "services/taskApi";
+// import { addNewTask, saveTask } from "services/taskApi";
+import apiService from "services/taskApi";
+import DateTimePicker from "./DateTimeSelector";
 import ToastNotification from "./ToastNotification";
 
 const statusObj = {
@@ -30,9 +33,10 @@ const Task = (props) => {
   const [titleText, setTitleText] = useState(props.title);
   const [descriptionText, setDescriptionText] = useState(props.description);
   const [selectedStatus, setSelectedStatus] = useState(statusObj[props.status]);
-  const [dueDate, setDueDate] = useState(statusObj[props.dueDate]);
   const [toast, setToast] = useState(0);
-
+  const [selectedDateTime, setSelectedDateTime] = useState(
+    props.dueDate ? DateTime.fromISO(props.dueDate) : DateTime.utc()
+  );
   const handleEditClick = () => {
     setIsEditing(true);
   };
@@ -49,22 +53,43 @@ const Task = (props) => {
     setIsEditing(false);
     let statusNum = Number(findKeyByValue(statusObj, selectedStatus));
     const now = new Date();
-    const params = {
-      id: props.taskId,
-      title: titleText,
-      description: descriptionText,
-      status: statusNum,
-      DueDate: dueDate || now.toISOString(),
-    };
-    saveTask(props.taskId, params);
-    setToast((prev) => prev + 1);
+
+    if (props.isNewTask) {
+      const params = {
+        title: titleText,
+        description: descriptionText,
+        status: statusNum,
+        DueDate: selectedDateTime || now.toISOString(),
+      };
+      apiService.addNewTask(params);
+      setToast("The task has been successfully added!");
+    } else {
+      const params = {
+        id: props.taskId,
+        title: titleText,
+        description: descriptionText,
+        status: statusNum,
+        DueDate: selectedDateTime || now.toISOString(),
+      };
+      apiService.saveTask(props.taskId, params);
+      setToast("The task has been successfully saved!");
+    }
   };
 
   const handleStatusChange = (event) => {
     setSelectedStatus(event.target.value);
   };
 
-  const handleDeleteClick = (event) => {};
+  const handleDeleteClick = (event) => {
+    try {
+      if (props.isNewTask) {
+        props.refreshList((prev) => prev + 1);
+      } else {
+        apiService.deleteTask(props.taskId);
+        props.refreshList((prev) => prev + 1);
+      }
+    } catch (error) {}
+  };
 
   return (
     <Box
@@ -75,7 +100,7 @@ const Task = (props) => {
         alignItems: "flex-start",
         justifyContent: "space-between",
         width: "30rem",
-        height: "20rem",
+        height: "25rem",
         boxShadow: " 0px 0px 28px -5px rgba(0,0,0,0.75)",
         padding: "1rem",
         fontFamily: "'Montserrat', sans-serif",
@@ -104,7 +129,6 @@ const Task = (props) => {
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-start",
-              gap: 1,
             }}
           >
             {isEditing ? (
@@ -116,14 +140,12 @@ const Task = (props) => {
                   width: "100%",
                 }}
               >
-                <Typography fontSize="1.3rem" fontWeight="bold">
-                  Title:
-                </Typography>
                 <TextField
                   fullWidth
                   value={titleText}
                   onChange={handleTitleChange}
                   variant="outlined"
+                  label="Title"
                 />
               </Box>
             ) : (
@@ -138,9 +160,9 @@ const Task = (props) => {
                   alignItems: "start",
                   gap: 2,
                   width: "100%",
+                  marginTop: "1rem",
                 }}
               >
-                <Typography fontSize="1rem">Description:</Typography>
                 <TextField
                   fullWidth
                   value={descriptionText}
@@ -148,6 +170,7 @@ const Task = (props) => {
                   rows={4}
                   variant="outlined"
                   multiline
+                  label="Description"
                 />
               </Box>
             ) : (
@@ -156,7 +179,7 @@ const Task = (props) => {
               </Typography>
             )}
             {isEditing ? (
-              <FormControl fullWidth sx={{ marginTop: 2 }}>
+              <FormControl fullWidth sx={{ marginTop: 2, marginBottom: 2 }}>
                 <InputLabel>Status:</InputLabel>
                 <Select
                   value={selectedStatus}
@@ -173,12 +196,19 @@ const Task = (props) => {
             ) : (
               <Typography fontSize="1rem">Status: {selectedStatus}</Typography>
             )}
+            {isEditing ? (
+              <DateTimePicker
+                initialDateTime={selectedDateTime}
+                onChange={(value) => setSelectedDateTime(value)}
+              />
+            ) : (
+              <Typography>
+                DueDate: {selectedDateTime.toFormat("dd-MM-yyyy HH:mm")}
+              </Typography>
+            )}
           </Box>
         </Box>
-        <ToastNotification
-          triggerToast={toast}
-          message="The task has been successfully saved!"
-        />
+        <ToastNotification triggerToast={toast} message={toast} />
         <Box className="task-actions" sx={{}}>
           {isEditing ? (
             <IconButton
