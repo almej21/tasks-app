@@ -1,14 +1,13 @@
 import { Alert, Snackbar } from "@mui/material";
 import { useEffect, useState } from "react";
 
-const ToastNotification = ({ message, triggerToast }) => {
+const ToastNotification = (props) => {
   const [open, setOpen] = useState(false);
-
   useEffect(() => {
-    if (triggerToast !== 0) {
+    if (props.toastObj.triggerToast !== false) {
       setOpen(true);
     }
-  }, [triggerToast]);
+  }, [props.toastObj]);
 
   // Open the snackbar
   const handleClick = () => {
@@ -28,8 +27,12 @@ const ToastNotification = ({ message, triggerToast }) => {
         onClose={handleClose}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleClose} severity="success" sx={{ width: "100%" }}>
-          {message || "This is a custom message!"}
+        <Alert
+          onClose={handleClose}
+          severity={props.toastObj.severity || "success"}
+          sx={{ width: "100%" }}
+        >
+          {props.toastObj.title || "This is a custom message!"}
         </Alert>
       </Snackbar>
     </div>

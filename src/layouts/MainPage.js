@@ -5,18 +5,25 @@ import ToastNotification from "components/ToastNotification";
 import { useEffect, useState } from "react";
 import apiService from "services/taskApi";
 
+const generateUniqueId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+};
+
 const MainPage = () => {
   const [tasks, setTasks] = useState([]);
   const [newTasks, setNewTasks] = useState([]);
   const [error, setError] = useState(null);
-  const [toast, setToast] = useState(0);
+  // const [toast, setToast] = useState(0);
+  const [toastObj, setToastObj] = useState({
+    title: "",
+    severity: "success",
+    triggerToast: false,
+  });
   const [refreshList, setRefreshList] = useState(0);
 
   useEffect(() => {
     async function getTasks() {
       try {
-        console.log(tasks);
-
         const data = await apiService.fetchTasks();
         setTasks(data);
         if (data.length === 0) {
@@ -35,17 +42,37 @@ const MainPage = () => {
       title: "",
       description: "",
       dueDate: "",
-      status: 3,
+      status: 0,
+      isNew: true,
+      localId: generateUniqueId(),
     };
 
     setNewTasks([...newTasks, newTask]);
   };
 
+  const handleDeleteTaskClick = async (keyToDelete, isNew) => {
+    if (isNew) {
+      setNewTasks((prevTasks) =>
+        prevTasks.filter((task) => task.localId !== keyToDelete)
+      );
+    } else {
+      console.log(tasks);
+      setTasks((prevTasks) =>
+        prevTasks.filter((task) => task.id !== keyToDelete)
+      );
+    }
+  };
+
+  const allTasks = [...newTasks, ...tasks];
+  // console.log("allTasks:", allTasks);
+
   return (
     <>
       {/* <Toolbar className="Toolbar"></Toolbar> */}
-      <ToastNotification triggerToast={toast} message={toast} />
-      <Typography fontSize="3rem">Tasks</Typography>
+      <ToastNotification toastObj={toastObj} />
+      <Typography fontSize="3rem" mt={4}>
+        Tasks
+      </Typography>
       <IconButton
         onClick={handleNewTaskClick}
         sx={{
@@ -57,69 +84,52 @@ const MainPage = () => {
         <Add />
         New Task
       </IconButton>
-      <Box sx={{ display: "flex", flexDirection: "row" }}>
-        {tasks.length === 0 && newTasks.length === 0 && (
+      <Box
+        className="content-container"
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          width: "100%",
+          // border: "1px solid red",
+          justifyContent: "center",
+        }}
+      >
+        {allTasks.length === 0 ? (
           <Typography fontSize={25} mt={20}>
             No Tasks Available
           </Typography>
+        ) : (
+          <Box
+            className="tasks-container"
+            sx={{
+              margin: "3rem",
+              display: "flex",
+              width: "100%",
+              flexDirection: {
+                xs: "column",
+                lg: "row",
+              },
+              flexWrap: "wrap",
+              gap: 4,
+              // border: "2px solid red",
+              alignItems: "center",
+            }}
+          >
+            {allTasks.map((task) => (
+              <Task
+                localId={task.localId}
+                key={task.id}
+                taskId={task.id}
+                title={task.title}
+                description={task.description || ""}
+                status={task.status}
+                dueDate={task.dueDate}
+                saveTask={apiService.saveTask}
+                deleteTask={handleDeleteTaskClick}
+              ></Task>
+            ))}
+          </Box>
         )}
-        <Box
-          className="new-tasks-container"
-          sx={{
-            margin: "3rem",
-            display: "flex",
-            flexDirection: {
-              xs: "column",
-              md: "row",
-            },
-            flexWrap: "wrap",
-            gap: 4,
-            border: "2px solid green",
-            alignItems: "center",
-          }}
-        >
-          {newTasks.map((task) => (
-            <Task
-              key={task.id}
-              taskId={task.id}
-              title={task.title}
-              description={task.description || ""}
-              status={task.status}
-              dueDate={task.dueDate}
-              // saveTask={handleNewTaskSave}
-              isNewTask={true}
-              refreshList={setRefreshList}
-            ></Task>
-          ))}
-        </Box>
-        <Box
-          className="tasks-container"
-          sx={{
-            margin: "3rem",
-            display: "flex",
-            flexDirection: {
-              xs: "column",
-              md: "row",
-            },
-            flexWrap: "wrap",
-            gap: 4,
-            border: "2px solid red",
-            alignItems: "center",
-          }}
-        >
-          {tasks.map((task) => (
-            <Task
-              key={task.id}
-              taskId={task.id}
-              title={task.title}
-              description={task.description || ""}
-              status={task.status}
-              dueDate={task.dueDate}
-              saveTask={apiService.saveTask}
-              refreshList={setRefreshList}
-            ></Task>
-          ))}
-        </Box>
       </Box>
     </>
   );

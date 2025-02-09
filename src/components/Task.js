@@ -9,8 +9,9 @@ import {
   Typography,
 } from "@mui/material";
 import Box from "@mui/material/Box";
+import { motion } from "framer-motion";
 import { DateTime } from "luxon";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 // import { addNewTask, saveTask } from "services/taskApi";
 import apiService from "services/taskApi";
 import DateTimePicker from "./DateTimeSelector";
@@ -29,11 +30,17 @@ const findKeyByValue = (obj, value) => {
 };
 
 const Task = (props) => {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(!props.taskId);
   const [titleText, setTitleText] = useState(props.title);
   const [descriptionText, setDescriptionText] = useState(props.description);
   const [selectedStatus, setSelectedStatus] = useState(statusObj[props.status]);
-  const [toast, setToast] = useState(0);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const buttonRef = useRef(null);
+  const [toastObj, setToastObj] = useState({
+    title: "",
+    severity: "success",
+    triggerToast: false,
+  });
   const [selectedDateTime, setSelectedDateTime] = useState(
     props.dueDate ? DateTime.fromISO(props.dueDate) : DateTime.utc()
   );
@@ -50,11 +57,20 @@ const Task = (props) => {
   };
 
   const handleSaveClick = () => {
-    setIsEditing(false);
     let statusNum = Number(findKeyByValue(statusObj, selectedStatus));
     const now = new Date();
 
-    if (props.isNewTask) {
+    if (!props.taskId) {
+      if (!titleText) {
+        setToastObj({
+          title: "You must give the task a title",
+          severity: "error",
+          triggerToast: true,
+        });
+        return;
+      }
+      setIsEditing(false);
+
       const params = {
         title: titleText,
         description: descriptionText,
@@ -62,7 +78,11 @@ const Task = (props) => {
         DueDate: selectedDateTime || now.toISOString(),
       };
       apiService.addNewTask(params);
-      setToast("The task has been successfully added!");
+      setToastObj({
+        title: "The task has been successfully added!",
+        severity: "success",
+        triggerToast: true,
+      });
     } else {
       const params = {
         id: props.taskId,
@@ -72,7 +92,11 @@ const Task = (props) => {
         DueDate: selectedDateTime || now.toISOString(),
       };
       apiService.saveTask(props.taskId, params);
-      setToast("The task has been successfully saved!");
+      setToastObj({
+        title: "The task has been successfully saved!",
+        severity: "success",
+      });
+      setIsEditing(false);
     }
   };
 
@@ -81,15 +105,35 @@ const Task = (props) => {
   };
 
   const handleDeleteClick = (event) => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+
     try {
-      if (props.isNewTask) {
-        props.refreshList((prev) => prev + 1);
+      if (!props.taskId) {
+        props.deleteTask(props.localId, true);
       } else {
         apiService.deleteTask(props.taskId);
-        props.refreshList((prev) => prev + 1);
+        props.deleteTask(props.taskId, false);
       }
+      setConfirmDelete(false);
     } catch (error) {}
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (buttonRef.current && !buttonRef.current.contains(event.target)) {
+        setConfirmDelete(false); // Stop shaking and reset color
+      }
+    };
+
+    if (confirmDelete) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [confirmDelete]);
 
   return (
     <Box
@@ -208,7 +252,7 @@ const Task = (props) => {
             )}
           </Box>
         </Box>
-        <ToastNotification triggerToast={toast} message={toast} />
+        <ToastNotification toastObj={toastObj} />
         <Box className="task-actions" sx={{}}>
           {isEditing ? (
             <IconButton
@@ -241,9 +285,18 @@ const Task = (props) => {
           width: "100%",
         }}
       >
-        <IconButton onClick={handleDeleteClick} sx={{}}>
-          <Delete />
-        </IconButton>
+        <motion.div
+          ref={buttonRef}
+          animate={confirmDelete ? { x: [-3, 3, -3, 3, 0] } : { x: 0 }} // Reset shake properly
+          transition={confirmDelete ? { repeat: Infinity, duration: 0.3 } : {}} // Stop animation when state resets
+        >
+          <IconButton
+            onClick={handleDeleteClick}
+            sx={{ color: confirmDelete ? "red" : "default" }}
+          >
+            <Delete />
+          </IconButton>
+        </motion.div>
       </Box>
     </Box>
   );
