@@ -78,6 +78,9 @@ const Task = (props) => {
         DueDate: selectedDateTime || now.toISOString(),
       };
       apiService.addNewTask(params);
+      setSelectedDateTime(selectedDateTime);
+      props.setRefreshList((prev) => prev + 1);
+      props.removeTask(props.localId);
       setToastObj({
         title: "The task has been successfully added!",
         severity: "success",
@@ -92,6 +95,7 @@ const Task = (props) => {
         DueDate: selectedDateTime || now.toISOString(),
       };
       apiService.saveTask(props.taskId, params);
+      setSelectedDateTime(selectedDateTime);
       setToastObj({
         title: "The task has been successfully saved!",
         severity: "success",
@@ -135,6 +139,10 @@ const Task = (props) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [confirmDelete]);
 
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 1);
+  const bgColor = selectedDateTime < now ? "#d4d4d4" : "white";
+
   return (
     <Box
       sx={{
@@ -148,6 +156,7 @@ const Task = (props) => {
         boxShadow: " 0px 0px 28px -5px rgba(0,0,0,0.75)",
         padding: "1rem",
         fontFamily: "'Montserrat', sans-serif",
+        backgroundColor: bgColor,
       }}
     >
       <Box
@@ -164,7 +173,7 @@ const Task = (props) => {
           className="task-content"
           sx={{
             // border: "1px solid red",
-            width: "100%",
+            width: "90%",
           }}
         >
           <Box
@@ -173,6 +182,8 @@ const Task = (props) => {
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-start",
+              gap: ".5rem",
+              flexWrap: "wrap",
             }}
           >
             {isEditing ? (
@@ -193,7 +204,7 @@ const Task = (props) => {
                 />
               </Box>
             ) : (
-              <Typography fontSize="1.3rem" fontWeight="bold">
+              <Typography fontSize="1.3rem" fontWeight="bold" textAlign="left">
                 Title: {titleText}
               </Typography>
             )}
@@ -218,7 +229,14 @@ const Task = (props) => {
                 />
               </Box>
             ) : (
-              <Typography fontSize="1rem">
+              <Typography
+                fontSize="1rem"
+                textAlign="left"
+                sx={{
+                  overflowWrap: "break-word",
+                  maxWidth: "100%",
+                }}
+              >
                 Description: {descriptionText}
               </Typography>
             )}
@@ -258,7 +276,6 @@ const Task = (props) => {
             <IconButton
               onClick={handleSaveClick}
               sx={{
-                top: 8,
                 left: 8,
               }}
             >
@@ -268,7 +285,6 @@ const Task = (props) => {
             <IconButton
               onClick={handleEditClick}
               sx={{
-                top: 8,
                 left: 8,
               }}
             >

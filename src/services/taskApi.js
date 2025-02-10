@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5238/api/customtasks/";
+const API_URL = "http://localhost:5001/api/customtasks/";
 
 const apiService = {
   async fetchTasks() {
@@ -32,9 +32,6 @@ const apiService = {
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      const data = await response.json();
-      return data;
     } catch (error) {
       console.error("Error saving task:", error);
       return null;
@@ -52,9 +49,6 @@ const apiService = {
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      const data = await response.json();
-      return data;
     } catch (error) {
       console.error("Error creating tasks:", error);
       return null;
@@ -71,9 +65,6 @@ const apiService = {
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      const data = await response.json();
-      return data;
     } catch (error) {
       console.error("Error deleting task:", error);
       return null;
